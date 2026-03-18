@@ -1,14 +1,10 @@
 name: Tests
 
-# trigger: force run    # ← this is just a comment, has no effect
-
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
   schedule:
     - cron: '*/5 * * * *'
 
@@ -18,42 +14,46 @@ jobs:
 
     strategy:
       matrix:
-        php-versions: ['8.3']
+        php-version: ['8.3']
 
-    name: Run script (PHP ${{ matrix.php-versions }})
+    name: Run script (PHP ${{ matrix.php-version }})
 
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Install PHP
+      - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php-versions }}
+          php-version: ${{ matrix.php-version }}
 
       - name: Install dependencies
-        run: |
-          composer update --prefer-dist --no-progress
+        run: composer install --no-progress --prefer-dist
 
-      - name: Write private key to file
+      - name: Write OCI private key
         run: |
           mkdir -p $HOME/.oci
-          echo "${{ secrets.OCI_PRIVATE_KEY }}" > $HOME/.oci/private-key.pem
+          printf "%s" "${{ secrets.OCI_PRIVATE_KEY }}" | sed 's/\\n/\n/g' > $HOME/.oci/private-key.pem
           chmod 600 $HOME/.oci/private-key.pem
 
-      - name: Run script
+      - name: Verify key (debug)
         run: |
-          php ./index.php
+          ls -la $HOME/.oci
+          head -n 2 $HOME/.oci/private-key.pem
+
+      - name: Run script
+        run: php ./index.php
         env:
-          OCI_REGION:            ${{ secrets.OCI_REGION }}
-          OCI_USER_ID:           ${{ secrets.OCI_USER_ID }}
-          OCI_TENANCY_ID:        ${{ secrets.OCI_TENANCY_ID }}
-          OCI_KEY_FINGERPRINT:   ${{ secrets.OCI_KEY_FINGERPRINT }}
-          OCI_PRIVATE_KEY_FILENAME: "/home/runner/.oci/private-key.pem"
-          OCI_AVAILABILITY_DOMAIN:  ${{ secrets.OCI_AVAILABILITY_DOMAIN }}
-          OCI_SUBNET_ID:         ${{ secrets.OCI_SUBNET_ID }}
-          OCI_IMAGE_ID:          ${{ secrets.OCI_IMAGE_ID }}
-          OCI_OCPUS:             ${{ secrets.OCI_OCPUS }}
-          OCI_MEMORY_IN_GBS:     ${{ secrets.OCI_MEMORY_IN_GBS }}
-          OCI_SHAPE:             ${{ secrets.OCI_SHAPE }}
-          OCI_MAX_INSTANCES:     ${{ secrets.OCI_MAX_INSTANCES }}
-          OCI_SSH_PUBLIC_KEY:    ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          OCI_REGION: ${{ secrets.OCI_REGION }}
+          OCI_USER_ID: ${{ secrets.OCI_USER_ID }}
+          OCI_TENANCY_ID: ${{ secrets.OCI_TENANCY_ID }}
+          OCI_KEY_FINGERPRINT: ${{ secrets.OCI_KEY_FINGERPRINT }}
+          OCI_PRIVATE_KEY_FILENAME: /home/runner/.oci/private-key.pem
+          OCI_AVAILABILITY_DOMAIN: ${{ secrets.OCI_AVAILABILITY_DOMAIN }}
+          OCI_SUBNET_ID: ${{ secrets.OCI_SUBNET_ID }}
+          OCI_IMAGE_ID: ${{ secrets.OCI_IMAGE_ID }}
+          OCI_OCPUS: ${{ secrets.OCI_OCPUS }}
+          OCI_MEMORY_IN_GBS: ${{ secrets.OCI_MEMORY_IN_GBS }}
+          OCI_SHAPE: ${{ secrets.OCI_SHAPE }}
+          OCI_MAX_INSTANCES: ${{ secrets.OCI_MAX_INSTANCES }}
+          OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
